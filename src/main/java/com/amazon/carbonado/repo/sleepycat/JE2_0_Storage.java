@@ -28,9 +28,10 @@ import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
 
-import com.amazon.carbonado.Storable;
 import com.amazon.carbonado.ConfigurationException;
+import com.amazon.carbonado.FetchException;
 import com.amazon.carbonado.RepositoryException;
+import com.amazon.carbonado.Storable;
 
 /**
  * Storage implementation for JERepository.
@@ -38,6 +39,7 @@ import com.amazon.carbonado.RepositoryException;
  * @author Brian S O'Neill
  * @author Nicole Deflaux
  */
+// FIXME: Rename to JE_Storage. API appears stable.
 class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     // Primary database of Storable instances
     private Database mDatabase;
@@ -55,6 +57,14 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     {
         super(repository, type);
         open(repository.mEnv.getConfig().getReadOnly());
+    }
+
+    public long countAll() throws FetchException {
+        try {
+            return mDatabase.count();
+        } catch (DatabaseException e) {
+            throw JE2_0_ExceptionTransformer.getInstance().transformIntoFetchException(e);
+        }
     }
 
     protected boolean db_exists(Transaction txn, byte[] key, boolean rmw) throws Exception {
