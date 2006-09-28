@@ -78,6 +78,7 @@ class JE2_0_Repository extends BDBRepository<Transaction> {
 
     final Environment mEnv;
     boolean mDatabasesTransactional;
+
     /**
      * Open the repository using the given BDB repository configuration.
      *
@@ -147,7 +148,7 @@ class JE2_0_Repository extends BDBRepository<Transaction> {
 
         mDatabasesTransactional = envConfig.getTransactional();
         if (builder.getDatabasesTransactional() != null) {
-                mDatabasesTransactional = builder.getDatabasesTransactional();
+            mDatabasesTransactional = builder.getDatabasesTransactional();
         }
 
         start(0, 0);

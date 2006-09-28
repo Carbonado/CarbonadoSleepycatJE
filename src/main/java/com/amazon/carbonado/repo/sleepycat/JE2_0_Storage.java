@@ -59,6 +59,7 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         open(repository.mEnv.getConfig().getReadOnly());
     }
 
+    @Override
     public long countAll() throws FetchException {
         try {
             return mDatabase.count();
