@@ -24,6 +24,7 @@ import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
+import com.sleepycat.je.JEVersion;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
@@ -61,6 +62,13 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
 
     @Override
     public long countAll() throws FetchException {
+        JEVersion v = JEVersion.CURRENT_VERSION;
+
+        if (v.getMajor() < 3 || (v.getMajor() == 3 && v.getMinor() < 1)) {
+            // Older versions of JE don't support the direct count operation.
+            return super.countAll();
+        }
+
         try {
             return mDatabase.count();
         } catch (DatabaseException e) {
