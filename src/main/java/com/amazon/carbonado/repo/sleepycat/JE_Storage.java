@@ -40,7 +40,6 @@ import com.amazon.carbonado.Storable;
  * @author Brian S O'Neill
  * @author Nicole Deflaux
  */
-// FIXME: Rename to JE_Storage. API appears stable.
 class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     // Primary database of Storable instances
     private Database mDatabase;
