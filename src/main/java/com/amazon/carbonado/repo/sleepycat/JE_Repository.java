@@ -41,7 +41,7 @@ import com.amazon.carbonado.Storable;
  *
  * @author Brian S O'Neill
  */
-class JE2_0_Repository extends BDBRepository<Transaction> {
+class JE_Repository extends BDBRepository<Transaction> {
     private static final TransactionConfig
         TXN_READ_UNCOMMITTED,        TXN_READ_COMMITTED,        TXN_REPEATABLE_READ,
         TXN_SERIALIZABLE,
@@ -85,10 +85,10 @@ class JE2_0_Repository extends BDBRepository<Transaction> {
      * @throws IllegalArgumentException if name or environment home is null
      * @throws RepositoryException if there is a problem opening the environment
      */
-    JE2_0_Repository(RepositoryReference rootRef, BDBRepositoryBuilder builder)
+    JE_Repository(RepositoryReference rootRef, BDBRepositoryBuilder builder)
         throws RepositoryException
     {
-        super(rootRef, builder, JE2_0_ExceptionTransformer.getInstance());
+        super(rootRef, builder, JE_ExceptionTransformer.getInstance());
 
         EnvironmentConfig envConfig;
         try {
@@ -137,7 +137,7 @@ class JE2_0_Repository extends BDBRepository<Transaction> {
         try {
             mEnv = new Environment(builder.getEnvironmentHomeFile(), envConfig);
         } catch (DatabaseException e) {
-            throw JE2_0_ExceptionTransformer.getInstance().toRepositoryException(e);
+            throw JE_ExceptionTransformer.getInstance().toRepositoryException(e);
         } catch (Throwable e) {
             String message = "Unable to open environment";
             if (e.getMessage() != null) {
@@ -279,6 +279,6 @@ class JE2_0_Repository extends BDBRepository<Transaction> {
     protected <S extends Storable> BDBStorage<Transaction, S> createStorage(Class<S> type)
         throws Exception
     {
-        return new JE2_0_Storage<S>(this, type);
+        return new JE_Storage<S>(this, type);
     }
 }

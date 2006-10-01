@@ -36,17 +36,17 @@ import com.amazon.carbonado.spi.ExceptionTransformer;
  *
  * @author Brian S O'Neill
  */
-class JE2_0_ExceptionTransformer extends ExceptionTransformer {
-    private static JE2_0_ExceptionTransformer cInstance;
+class JE_ExceptionTransformer extends ExceptionTransformer {
+    private static JE_ExceptionTransformer cInstance;
 
-    public static JE2_0_ExceptionTransformer getInstance() {
+    public static JE_ExceptionTransformer getInstance() {
         if (cInstance == null) {
-            cInstance = new JE2_0_ExceptionTransformer();
+            cInstance = new JE_ExceptionTransformer();
         }
         return cInstance;
     }
 
-    JE2_0_ExceptionTransformer() {
+    JE_ExceptionTransformer() {
     }
 
     @Override

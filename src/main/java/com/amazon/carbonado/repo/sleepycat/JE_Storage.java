@@ -41,7 +41,7 @@ import com.amazon.carbonado.Storable;
  * @author Nicole Deflaux
  */
 // FIXME: Rename to JE_Storage. API appears stable.
-class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
+class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     // Primary database of Storable instances
     private Database mDatabase;
 
@@ -53,7 +53,7 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
      * @throws DatabaseException
      * @throws SupportException
      */
-    JE2_0_Storage(JE2_0_Repository repository, Class<S> type)
+    JE_Storage(JE_Repository repository, Class<S> type)
         throws DatabaseException, RepositoryException
     {
         super(repository, type);
@@ -72,7 +72,7 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         try {
             return mDatabase.count();
         } catch (DatabaseException e) {
-            throw JE2_0_ExceptionTransformer.getInstance().transformIntoFetchException(e);
+            throw JE_ExceptionTransformer.getInstance().transformIntoFetchException(e);
         }
     }
 
@@ -146,7 +146,7 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     protected Object env_openPrimaryDatabase(Transaction txn, String name)
         throws Exception
     {
-        JE2_0_Repository repository = (JE2_0_Repository) getRepository();
+        JE_Repository repository = (JE_Repository) getRepository();
         Environment env = repository.mEnv;
         boolean readOnly = env.getConfig().getReadOnly();
 
@@ -194,7 +194,7 @@ class JE2_0_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
          Object database)
         throws Exception
     {
-        return new JE2_0_Cursor<S>
+        return new JE_Cursor<S>
             (txnMgr,
              startBound, inclusiveStart,
              endBound, inclusiveEnd,
