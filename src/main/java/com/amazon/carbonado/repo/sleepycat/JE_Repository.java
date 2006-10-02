@@ -180,6 +180,11 @@ class JE_Repository extends BDBRepository<Transaction> {
             return parent.getIsolationLevel();
         }
 
+        if (level == IsolationLevel.SNAPSHOT) {
+            // Not supported.
+            return null;
+        }
+
         if (parent != null) {
             IsolationLevel parentLevel = parent.getIsolationLevel();
             // Nested transactions are not supported, so they are faked. Isolation
@@ -273,7 +278,9 @@ class JE_Repository extends BDBRepository<Transaction> {
     }
 
     protected void env_close() throws Exception {
-        mEnv.close();
+        if (mEnv != null) {
+            mEnv.close();
+        }
     }
 
     protected <S extends Storable> BDBStorage<Transaction, S> createStorage(Class<S> type)
