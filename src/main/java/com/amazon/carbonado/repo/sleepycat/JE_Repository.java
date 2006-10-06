@@ -18,6 +18,8 @@
 
 package com.amazon.carbonado.repo.sleepycat;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.sleepycat.je.CheckpointConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -28,8 +30,8 @@ import com.sleepycat.je.TransactionConfig;
 
 import com.amazon.carbonado.ConfigurationException;
 import com.amazon.carbonado.IsolationLevel;
+import com.amazon.carbonado.Repository;
 import com.amazon.carbonado.RepositoryException;
-import static com.amazon.carbonado.RepositoryBuilder.RepositoryReference;
 import com.amazon.carbonado.Storable;
 
 /**
@@ -85,7 +87,7 @@ class JE_Repository extends BDBRepository<Transaction> {
      * @throws IllegalArgumentException if name or environment home is null
      * @throws RepositoryException if there is a problem opening the environment
      */
-    JE_Repository(RepositoryReference rootRef, BDBRepositoryBuilder builder)
+    JE_Repository(AtomicReference<Repository> rootRef, BDBRepositoryBuilder builder)
         throws RepositoryException
     {
         super(rootRef, builder, JE_ExceptionTransformer.getInstance());
