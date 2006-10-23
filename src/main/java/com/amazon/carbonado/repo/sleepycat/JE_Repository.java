@@ -24,7 +24,6 @@ import com.sleepycat.je.CheckpointConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.je.JEVersion;
 import com.sleepycat.je.Transaction;
 import com.sleepycat.je.TransactionConfig;
 
@@ -161,18 +160,6 @@ class JE_Repository extends BDBRepository<Transaction> {
 
     public Object getEnvironment() {
         return mEnv;
-    }
-
-    protected String getVersionMajor() {
-        return "je" + JEVersion.CURRENT_VERSION.getMajor();
-    }
-
-    protected String getVersionMajorMinor() {
-        return getVersionMajor() + '.' + JEVersion.CURRENT_VERSION.getMinor();
-    }
-
-    protected String getVersionMajorMinorPatch() {
-        return getVersionMajorMinor() + '.' + JEVersion.CURRENT_VERSION.getPatch();
     }
 
     IsolationLevel selectIsolationLevel(com.amazon.carbonado.Transaction parent,
