@@ -178,11 +178,15 @@ class JE_Repository extends BDBRepository<Transaction> {
         }
 
         if (parent != null) {
-            IsolationLevel parentLevel = parent.getIsolationLevel();
-            // Nested transactions are not supported, so they are faked. Isolation
-            // level cannot be increased, so return null. TransactionManager
-            // converts this to an UnsupportedOperationException.
-            level = parentLevel.compareTo(level) >= 0 ? parentLevel : null;
+            // Nested transactions are not supported, so they are faked.
+            if (level != IsolationLevel.NONE) {
+                // Allow requested isolation level to be lower, but it actually
+                // runs at parent level. Returning null indicates new level is
+                // not allowed and TransactionManager converts this to an
+                // UnsupportedOperationException.
+                IsolationLevel parentLevel = parent.getIsolationLevel();
+                level = parentLevel.compareTo(level) >= 0 ? parentLevel : null;
+            }
         }
 
         return level;
