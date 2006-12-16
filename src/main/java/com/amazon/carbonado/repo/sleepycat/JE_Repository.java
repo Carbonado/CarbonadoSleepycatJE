@@ -106,6 +106,7 @@ class JE_Repository extends BDBRepository<Transaction> {
             envConfig.setReadOnly(builder.getReadOnly());
             envConfig.setAllowCreate(!builder.getReadOnly());
             envConfig.setTxnNoSync(builder.getTransactionNoSync());
+            envConfig.setTxnWriteNoSync(builder.getTransactionWriteNoSync());
             if (builder.getLogInMemory()) {
                 envConfig.setConfigParam("je.log.memOnly", "true");
             }
