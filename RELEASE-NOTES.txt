@@ -1,0 +1,14 @@
+CarbonadoSleepycatJE version 1.1
+--------------------------------
+
+Carbonado is an extensible, high performance persistence abstraction layer for
+Java applications with a relational view to the underlying persistence
+technology.
+
+http://carbonado.sourceforge.net/
+
+The CarbonadoSleepycatJE project supports persistence via Oracle/Sleepycat
+Berkeley Database Java Edition.
+
+http://www.oracle.com/database/berkeley-db/je/index.html
+
