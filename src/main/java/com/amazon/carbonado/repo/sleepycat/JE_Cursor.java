@@ -31,6 +31,8 @@ import com.amazon.carbonado.FetchException;
 import com.amazon.carbonado.IsolationLevel;
 import com.amazon.carbonado.Storable;
 
+import com.amazon.carbonado.spi.TransactionManager;
+
 /**
  *
  *
@@ -56,7 +58,7 @@ class JE_Cursor<S extends Storable> extends BDBCursor<Transaction, S> {
      * @param database primary database to use
      * @throws IllegalArgumentException if any bound is null but is not inclusive
      */
-    JE_Cursor(BDBTransactionManager<Transaction> txnMgr,
+    JE_Cursor(TransactionManager<Transaction> txnMgr,
               byte[] startBound, boolean inclusiveStart,
               byte[] endBound, boolean inclusiveEnd,
               int maxPrefix,

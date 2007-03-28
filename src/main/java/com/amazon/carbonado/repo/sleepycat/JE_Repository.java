@@ -280,7 +280,7 @@ class JE_Repository extends BDBRepository<Transaction> {
         }
     }
 
-    protected <S extends Storable> BDBStorage<Transaction, S> createStorage(Class<S> type)
+    protected <S extends Storable> BDBStorage<Transaction, S> createBDBStorage(Class<S> type)
         throws Exception
     {
         return new JE_Storage<S>(this, type);

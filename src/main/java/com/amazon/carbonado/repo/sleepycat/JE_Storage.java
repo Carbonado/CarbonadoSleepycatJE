@@ -34,6 +34,8 @@ import com.amazon.carbonado.FetchException;
 import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.Storable;
 
+import com.amazon.carbonado.spi.TransactionManager;
+
 /**
  * Storage implementation for JERepository.
  *
@@ -43,6 +45,7 @@ import com.amazon.carbonado.Storable;
 class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     // Primary database of Storable instances
     private Database mDatabase;
+    private String mName;
 
     /**
      *
@@ -124,10 +127,10 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     protected void db_truncate(Transaction txn) throws Exception {
-        // TODO: Do this the non-deprecated way, which involves closing all
-        // database handles first.
-        //mDatabase.truncate(txn, false);
-        throw new UnsupportedOperationException();
+        close();
+        JE_Repository repository = (JE_Repository) getRepository();
+        repository.mEnv.truncateDatabase(txn, mName, false);
+        open(false, txn, false);
     }
 
     protected boolean db_isEmpty(Transaction txn, Object database, boolean rmw) throws Exception {
@@ -151,22 +154,18 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
 
         DatabaseConfig config;
         try {
-            config = (DatabaseConfig)
-                repository.getInitialDatabaseConfig();
+            config = (DatabaseConfig) repository.getInitialDatabaseConfig();
         } catch (ClassCastException e) {
             throw new ConfigurationException
                 ("Unsupported initial environment config. Must be instance of "
                  + DatabaseConfig.class.getName(), e);
         }
 
-        if(config == null) {
+        if (config == null) {
             config = new DatabaseConfig();
             config.setSortedDuplicates(false);
-        }
-        else {
-            if(config.getSortedDuplicates()) {
-                throw new IllegalArgumentException("DatabaseConfig: getSortedDuplicates is true");
-            }
+        } else if (config.getSortedDuplicates()) {
+            throw new IllegalArgumentException("DatabaseConfig: getSortedDuplicates is true");
         }
 
         // Overwrite these settings as they depend upon the
@@ -177,6 +176,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
 
         runDatabasePrepareForOpeningHook(config);
 
+        mName = name;
         return mDatabase = env.openDatabase(txn, name, config);
     }
 
@@ -185,7 +185,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     protected BDBCursor<Transaction, S> openCursor
-        (BDBTransactionManager<Transaction> txnMgr,
+        (TransactionManager<Transaction> txnMgr,
          byte[] startBound, boolean inclusiveStart,
          byte[] endBound, boolean inclusiveEnd,
          int maxPrefix,
