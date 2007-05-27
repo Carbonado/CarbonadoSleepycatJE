@@ -31,6 +31,7 @@ import com.sleepycat.je.Transaction;
 
 import com.amazon.carbonado.ConfigurationException;
 import com.amazon.carbonado.FetchException;
+import com.amazon.carbonado.IsolationLevel;
 import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.Storable;
 
@@ -68,6 +69,12 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
 
         if (v.getMajor() < 3 || (v.getMajor() == 3 && v.getMinor() < 1)) {
             // Older versions of JE don't support the direct count operation.
+            return super.countAll();
+        }
+
+        IsolationLevel level = getRepository().getTransactionIsolationLevel();
+        if (level != null && level.isAtLeast(IsolationLevel.REPEATABLE_READ)) {
+            // Database count operation is non-transactional.
             return super.countAll();
         }
 
