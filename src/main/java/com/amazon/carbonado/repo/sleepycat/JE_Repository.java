@@ -18,6 +18,7 @@
 
 package com.amazon.carbonado.repo.sleepycat;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sleepycat.je.CheckpointConfig;
@@ -195,7 +196,7 @@ class JE_Repository extends BDBRepository<Transaction> {
 
     protected Transaction txn_begin(Transaction parent, IsolationLevel level) throws Exception {
         // If parent exists, return it since real nested transactions are not
-        // supported in je2.0. This also has the side-effect that isolation
+        // supported in je3.x. This also has the side-effect that isolation
         // level cannot be increased.
         if (parent != null) {
             return parent;
@@ -220,11 +221,28 @@ class JE_Repository extends BDBRepository<Transaction> {
         return mEnv.beginTransaction(parent, config);
     }
 
+    @Override
+    protected Transaction txn_begin(Transaction parent, IsolationLevel level,
+                                    int timeout, TimeUnit unit)
+        throws Exception
+    {
+        // If parent exists, return it since real nested transactions are not
+        // supported in je3.x. This also has the side-effect that isolation
+        // level cannot be increased.
+        if (parent != null) {
+            return parent;
+        }
+
+        Transaction txn = txn_begin(parent, level);
+        txn.setLockTimeout(unit.toMicros(timeout));
+        return txn;
+    }
+
     protected Transaction txn_begin_nowait(Transaction parent, IsolationLevel level)
         throws Exception
     {
         // If parent exists, return it since real nested transactions are not
-        // supported in je2.0. This also has the side-effect that isolation
+        // supported in je3.x. This also has the side-effect that isolation
         // level cannot be increased.
         if (parent != null) {
             return parent;
