@@ -35,7 +35,7 @@ import com.amazon.carbonado.IsolationLevel;
 import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.Storable;
 
-import com.amazon.carbonado.spi.TransactionManager;
+import com.amazon.carbonado.spi.TransactionScope;
 
 /**
  * Storage implementation for JERepository.
@@ -192,7 +192,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     protected BDBCursor<Transaction, S> openCursor
-        (TransactionManager<Transaction> txnMgr,
+        (TransactionScope<Transaction> scope,
          byte[] startBound, boolean inclusiveStart,
          byte[] endBound, boolean inclusiveEnd,
          int maxPrefix,
@@ -201,7 +201,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         throws Exception
     {
         return new JE_Cursor<S>
-            (txnMgr,
+            (scope,
              startBound, inclusiveStart,
              endBound, inclusiveEnd,
              maxPrefix,
