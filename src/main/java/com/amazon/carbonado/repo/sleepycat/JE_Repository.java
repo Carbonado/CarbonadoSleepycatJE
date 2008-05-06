@@ -164,6 +164,7 @@ class JE_Repository extends BDBRepository<Transaction> {
         return mEnv;
     }
 
+    @Override
     IsolationLevel selectIsolationLevel(com.amazon.carbonado.Transaction parent,
                                         IsolationLevel level)
     {
@@ -194,6 +195,7 @@ class JE_Repository extends BDBRepository<Transaction> {
         return level;
     }
 
+    @Override
     protected Transaction txn_begin(Transaction parent, IsolationLevel level) throws Exception {
         // If parent exists, return it since real nested transactions are not
         // supported in je3.x. This also has the side-effect that isolation
@@ -238,6 +240,7 @@ class JE_Repository extends BDBRepository<Transaction> {
         return txn;
     }
 
+    @Override
     protected Transaction txn_begin_nowait(Transaction parent, IsolationLevel level)
         throws Exception
     {
@@ -267,20 +270,24 @@ class JE_Repository extends BDBRepository<Transaction> {
         return mEnv.beginTransaction(parent, config);
     }
 
+    @Override
     protected void txn_commit(Transaction txn) throws Exception {
         txn.commit();
     }
 
+    @Override
     protected void txn_abort(Transaction txn) throws Exception {
         txn.abort();
     }
 
+    @Override
     protected void env_checkpoint() throws Exception {
         CheckpointConfig cc = new CheckpointConfig();
         cc.setForce(true);
         mEnv.checkpoint(cc);
     }
 
+    @Override
     protected void env_checkpoint(int kBytes, int minutes) throws Exception {
         CheckpointConfig cc = new CheckpointConfig();
         cc.setKBytes(kBytes);
@@ -288,16 +295,19 @@ class JE_Repository extends BDBRepository<Transaction> {
         mEnv.checkpoint(cc);
     }
 
+    @Override
     protected void env_detectDeadlocks() throws Exception {
         // Unsupported feature
     }
 
+    @Override
     protected void env_close() throws Exception {
         if (mEnv != null) {
             mEnv.close();
         }
     }
 
+    @Override
     protected <S extends Storable> BDBStorage<Transaction, S> createBDBStorage(Class<S> type)
         throws Exception
     {

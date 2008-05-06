@@ -85,6 +85,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         }
     }
 
+    @Override
     protected boolean db_exists(Transaction txn, byte[] key, boolean rmw) throws Exception {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         DatabaseEntry dataEntry = new DatabaseEntry();
@@ -94,6 +95,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         return status != OperationStatus.NOTFOUND;
     }
 
+    @Override
     protected byte[] db_get(Transaction txn, byte[] key, boolean rmw) throws Exception {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         DatabaseEntry dataEntry = new DatabaseEntry();
@@ -105,6 +107,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         return dataEntry.getData();
     }
 
+    @Override
     protected Object db_putNoOverwrite(Transaction txn, byte[] key, byte[] value)
         throws Exception
     {
@@ -120,6 +123,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         }
     }
 
+    @Override
     protected boolean db_put(Transaction txn, byte[] key, byte[] value)
         throws Exception
     {
@@ -128,11 +132,13 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         return mDatabase.put(txn, keyEntry, dataEntry) == OperationStatus.SUCCESS;
     }
 
+    @Override
     protected boolean db_delete(Transaction txn, byte[] key) throws Exception {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         return mDatabase.delete(txn, keyEntry) == OperationStatus.SUCCESS;
     }
 
+    @Override
     protected void db_truncate(Transaction txn) throws Exception {
         close();
         JE_Repository repository = (JE_Repository) getRepository();
@@ -140,6 +146,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         open(false, txn, false);
     }
 
+    @Override
     protected boolean db_isEmpty(Transaction txn, Object database, boolean rmw) throws Exception {
         Cursor cursor = ((Database) database).openCursor(txn, null);
         OperationStatus status = cursor.getFirst
@@ -148,10 +155,12 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         return status == OperationStatus.NOTFOUND;
     }
 
+    @Override
     protected void db_close(Object database) throws Exception {
         ((Database) database).close();
     }
 
+    @Override
     protected Object env_openPrimaryDatabase(Transaction txn, String name)
         throws Exception
     {
@@ -187,10 +196,12 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         return mDatabase = env.openDatabase(txn, name, config);
     }
 
+    @Override
     protected void env_removeDatabase(Transaction txn, String databaseName) throws Exception {
         mDatabase.getEnvironment().removeDatabase(txn, databaseName);
     }
 
+    @Override
     protected BDBCursor<Transaction, S> openCursor
         (TransactionScope<Transaction> scope,
          byte[] startBound, boolean inclusiveStart,
