@@ -180,7 +180,7 @@ class JE_Repository extends BDBRepository<Transaction> {
             return null;
         }
 
-        if (parent != null) {
+        if (parent != null && parent.getIsolationLevel() != IsolationLevel.NONE) {
             // Nested transactions are not supported, so they are faked.
             if (level != IsolationLevel.NONE) {
                 // Allow requested isolation level to be lower, but it actually
