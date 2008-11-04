@@ -67,8 +67,10 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     public long countAll() throws FetchException {
         JEVersion v = JEVersion.CURRENT_VERSION;
 
-        if (v.getMajor() < 3 || (v.getMajor() == 3 && v.getMinor() < 1)) {
-            // Older versions of JE don't support the direct count operation.
+        if (v.getMajor() == 3 && v.getMinor() < 1) {
+            // Older versions of JE don't support the direct count
+            // operation. Major versions older than 3 are rejected completely
+            // by the JE_Repository constructor.
             return super.countAll();
         }
 

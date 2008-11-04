@@ -25,6 +25,7 @@ import com.sleepycat.je.CheckpointConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.JEVersion;
 import com.sleepycat.je.Transaction;
 import com.sleepycat.je.TransactionConfig;
 
@@ -33,6 +34,7 @@ import com.amazon.carbonado.IsolationLevel;
 import com.amazon.carbonado.Repository;
 import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.Storable;
+import com.amazon.carbonado.SupportException;
 
 /**
  * Repository implementation backed by a Berkeley DB, Java Edition. Data is
@@ -91,6 +93,14 @@ class JE_Repository extends BDBRepository<Transaction> {
         throws RepositoryException
     {
         super(rootRef, builder, JE_ExceptionTransformer.getInstance());
+
+        if (JEVersion.CURRENT_VERSION.getMajor() < 3) {
+            // Although repository can work just fine with older versions, some
+            // have bugs which cause severe storage corruption.
+            throw new SupportException
+                ("BDB-JE version is too old. Major version must at least be 3: " +
+                 JEVersion.CURRENT_VERSION);
+        }
 
         EnvironmentConfig envConfig;
         try {
