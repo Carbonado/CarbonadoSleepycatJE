@@ -122,8 +122,14 @@ class JE_Repository extends BDBRepository<Transaction> {
                 envConfig.setConfigParam("je.log.memOnly", "true");
             }
 
+            Integer cachePercent = builder.getCachePercent();
+            if (cachePercent != null && cachePercent > 0) {
+                envConfig.setConfigParam("je.maxMemoryPercent", cachePercent.toString());
+            }
+
+            // cacheSize will override any existing maxMemoryPercent setting
             Long cacheSize = builder.getCacheSize();
-            if (cacheSize != null) {
+            if (cacheSize != null && cacheSize > 0) {
                 envConfig.setConfigParam("je.maxMemory", cacheSize.toString());
             }
 
@@ -135,18 +141,6 @@ class JE_Repository extends BDBRepository<Transaction> {
         } else {
             if (!envConfig.getTransactional()) {
                 throw new IllegalArgumentException("EnvironmentConfig: getTransactional is false");
-            }
-
-            if (envConfig.getConfigParam("je.lock.timeout") == null) {
-                throw new IllegalArgumentException("EnvironmentConfig: je.lock.timeout must be set");
-            }
-
-            if (envConfig.getCacheSize() <= 0) {
-                throw new IllegalArgumentException("EnvironmentConfig: invalid cache size");
-            }
-
-            if (envConfig.getConfigParam("je.lock.timeout") == null) {
-                throw new IllegalArgumentException("EnvironmentConfig: je.txn.timeout must be set");
             }
         }
 
