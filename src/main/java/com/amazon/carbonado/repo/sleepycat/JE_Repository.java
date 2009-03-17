@@ -18,6 +18,8 @@
 
 package com.amazon.carbonado.repo.sleepycat;
 
+import java.io.File;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -28,6 +30,8 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.JEVersion;
 import com.sleepycat.je.Transaction;
 import com.sleepycat.je.TransactionConfig;
+
+import com.sleepycat.je.util.DbBackup;
 
 import com.amazon.carbonado.ConfigurationException;
 import com.amazon.carbonado.IsolationLevel;
@@ -81,7 +85,9 @@ class JE_Repository extends BDBRepository<Transaction> {
     }
 
     final Environment mEnv;
-    boolean mDatabasesTransactional;
+    final boolean mDatabasesTransactional;
+
+    private DbBackup mBackup;
 
     /**
      * Open the repository using the given BDB repository configuration.
@@ -156,10 +162,12 @@ class JE_Repository extends BDBRepository<Transaction> {
             throw new RepositoryException(message, e);
         }
 
-        mDatabasesTransactional = envConfig.getTransactional();
+        boolean databasesTransactional = envConfig.getTransactional();
         if (builder.getDatabasesTransactional() != null) {
-            mDatabasesTransactional = builder.getDatabasesTransactional();
+            databasesTransactional = builder.getDatabasesTransactional();
         }
+
+        mDatabasesTransactional = databasesTransactional;
 
         start(0, 0);
     }
@@ -316,5 +324,37 @@ class JE_Repository extends BDBRepository<Transaction> {
         throws Exception
     {
         return new JE_Storage<S>(this, type);
+    }
+
+    @Override
+    void enterBackupMode() throws Exception {
+        DbBackup backup = new DbBackup(mEnv);
+        backup.startBackup();
+        mBackup = backup;
+    }
+
+    @Override
+    void exitBackupMode() throws Exception {
+        DbBackup backup = mBackup;
+        if (backup != null) {
+            try {
+                backup.endBackup();
+            } finally {
+                mBackup = null;
+            }
+        }
+    }
+
+    @Override
+    File[] backupFiles() throws Exception {
+        File home = mEnv.getHome();
+
+        String[] names = mBackup.getLogFilesInBackupSet();
+        File[] files = new File[names.length];
+        for (int i=0; i<names.length; i++) {
+            files[i] = new File(home, names[i]);
+        }
+
+        return files;
     }
 }
