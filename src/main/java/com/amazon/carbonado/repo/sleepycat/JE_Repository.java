@@ -176,6 +176,23 @@ class JE_Repository extends BDBRepository<Transaction> {
         return mEnv;
     }
 
+    public BDBProduct getBDBProduct() {
+        return BDBProduct.JE;
+    }
+
+    public int[] getVersion() {
+        JEVersion version = JEVersion.CURRENT_VERSION;
+        return new int[] {version.getMajor(), version.getMinor(), version.getPatch()};
+    }
+
+    public File getHome() {
+        return mEnvHome;
+    }
+
+    public File getDataHome() {
+        return mEnvHome;
+    }
+
     @Override
     IsolationLevel selectIsolationLevel(com.amazon.carbonado.Transaction parent,
                                         IsolationLevel level)
