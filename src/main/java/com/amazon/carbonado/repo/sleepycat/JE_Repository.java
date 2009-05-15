@@ -128,6 +128,11 @@ class JE_Repository extends BDBRepository<Transaction> {
                 envConfig.setConfigParam("je.log.memOnly", "true");
             }
 
+            Boolean checksumEnabled = builder.getChecksumEnabled();
+            if (checksumEnabled != null) {
+                envConfig.setConfigParam("je.log.checksumRead", checksumEnabled.toString());
+            }
+
             Integer cachePercent = builder.getCachePercent();
             if (cachePercent != null && cachePercent > 0) {
                 envConfig.setConfigParam("je.maxMemoryPercent", cachePercent.toString());
@@ -169,7 +174,7 @@ class JE_Repository extends BDBRepository<Transaction> {
 
         mDatabasesTransactional = databasesTransactional;
 
-        start(0, 0);
+        start(0, 0, builder);
     }
 
     public Object getEnvironment() {
