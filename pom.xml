@@ -84,7 +84,7 @@
     <dependency>
       <groupId>berkeleydb</groupId>
       <artifactId>je</artifactId>
-      <version>3.2.44</version>
+      <version>3.3.87</version>
     </dependency>
   </dependencies>
 
