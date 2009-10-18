@@ -38,7 +38,7 @@ import com.amazon.carbonado.txn.TransactionScope;
  *
  * @author Brian S O'Neill
  */
-class JE_Cursor<S extends Storable> extends BDBCursor<Transaction, S> {
+class JE_Cursor<S extends Storable> extends BDBCursor<JE_Transaction, S> {
     private final Database mDatabase;
     private final LockMode mLockMode;
     private final DatabaseEntry mSearchKey;
@@ -58,7 +58,7 @@ class JE_Cursor<S extends Storable> extends BDBCursor<Transaction, S> {
      * @param database primary database to use
      * @throws IllegalArgumentException if any bound is null but is not inclusive
      */
-    JE_Cursor(TransactionScope<Transaction> scope,
+    JE_Cursor(TransactionScope<JE_Transaction> scope,
               byte[] startBound, boolean inclusiveStart,
               byte[] endBound, boolean inclusiveEnd,
               int maxPrefix,
@@ -129,7 +129,7 @@ class JE_Cursor<S extends Storable> extends BDBCursor<Transaction, S> {
     }
 
     @Override
-    protected void cursor_open(Transaction txn, IsolationLevel level) throws Exception {
+    protected void cursor_open(JE_Transaction jetxn, IsolationLevel level) throws Exception {
         CursorConfig config;
         if (level == IsolationLevel.READ_COMMITTED) {
             config = CursorConfig.READ_COMMITTED;
@@ -138,7 +138,7 @@ class JE_Cursor<S extends Storable> extends BDBCursor<Transaction, S> {
         } else {
             config = CursorConfig.DEFAULT;
         }
-        mCursor = mDatabase.openCursor(txn, config);
+        mCursor = mDatabase.openCursor(jetxn == null ? null : jetxn.mTxn, config);
     }
 
     @Override

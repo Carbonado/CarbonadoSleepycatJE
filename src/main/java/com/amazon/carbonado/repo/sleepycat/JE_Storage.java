@@ -43,7 +43,7 @@ import com.amazon.carbonado.txn.TransactionScope;
  * @author Brian S O'Neill
  * @author Nicole Deflaux
  */
-class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
+class JE_Storage<S extends Storable> extends BDBStorage<JE_Transaction, S> {
     // Primary database of Storable instances
     private Database mDatabase;
     private String mName;
@@ -88,21 +88,21 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     @Override
-    protected boolean db_exists(Transaction txn, byte[] key, boolean rmw) throws Exception {
+    protected boolean db_exists(JE_Transaction jetxn, byte[] key, boolean rmw) throws Exception {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         DatabaseEntry dataEntry = new DatabaseEntry();
         dataEntry.setPartial(0, 0, true);
         OperationStatus status = mDatabase.get
-            (txn, keyEntry, dataEntry, rmw ? LockMode.RMW : null);
+            (jetxn == null ? null : jetxn.mTxn, keyEntry, dataEntry, rmw ? LockMode.RMW : null);
         return status != OperationStatus.NOTFOUND;
     }
 
     @Override
-    protected byte[] db_get(Transaction txn, byte[] key, boolean rmw) throws Exception {
+    protected byte[] db_get(JE_Transaction jetxn, byte[] key, boolean rmw) throws Exception {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         DatabaseEntry dataEntry = new DatabaseEntry();
         OperationStatus status = mDatabase.get
-            (txn, keyEntry, dataEntry, rmw ? LockMode.RMW : null);
+            (jetxn == null ? null : jetxn.mTxn, keyEntry, dataEntry, rmw ? LockMode.RMW : null);
         if (status == OperationStatus.NOTFOUND) {
             return NOT_FOUND;
         }
@@ -110,13 +110,19 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     @Override
-    protected Object db_putNoOverwrite(Transaction txn, byte[] key, byte[] value)
+    protected Object db_putNoOverwrite(JE_Transaction jetxn, byte[] key, byte[] value)
         throws Exception
     {
+        Transaction txn = jetxn == null ? null : jetxn.mTxn;
+
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         DatabaseEntry dataEntry = new DatabaseEntry(value);
         OperationStatus status = mDatabase.putNoOverwrite(txn, keyEntry, dataEntry);
+
         if (status == OperationStatus.SUCCESS) {
+            if (jetxn != null) {
+                jetxn.addUndo(new UndoByDelete(mDatabase, txn, key));
+            }
             return SUCCESS;
         } else if (status == OperationStatus.KEYEXIST) {
             return KEY_EXIST;
@@ -126,31 +132,69 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     @Override
-    protected boolean db_put(Transaction txn, byte[] key, byte[] value)
+    protected boolean db_put(JE_Transaction jetxn, byte[] key, byte[] value)
         throws Exception
     {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
         DatabaseEntry dataEntry = new DatabaseEntry(value);
-        return mDatabase.put(txn, keyEntry, dataEntry) == OperationStatus.SUCCESS;
+
+        if (jetxn == null) {
+            return mDatabase.put(null, keyEntry, dataEntry) == OperationStatus.SUCCESS;
+        }
+
+        Transaction txn = jetxn.mTxn;
+        DatabaseEntry oldEntry = new DatabaseEntry();
+
+        OperationStatus getResult = mDatabase.get(txn, keyEntry, oldEntry, LockMode.RMW);
+
+        if (mDatabase.put(txn, keyEntry, dataEntry) == OperationStatus.SUCCESS) {
+            if (getResult == OperationStatus.NOTFOUND) {
+                jetxn.addUndo(new UndoByDelete(mDatabase, txn, key));
+            } else {
+                jetxn.addUndo(new UndoByPut(mDatabase, txn, key, oldEntry));
+            }
+            return true;
+        }
+
+        return false;
     }
 
     @Override
-    protected boolean db_delete(Transaction txn, byte[] key) throws Exception {
+    protected boolean db_delete(JE_Transaction jetxn, byte[] key) throws Exception {
         DatabaseEntry keyEntry = new DatabaseEntry(key);
-        return mDatabase.delete(txn, keyEntry) == OperationStatus.SUCCESS;
+
+        if (jetxn == null) {
+            return mDatabase.delete(null, keyEntry) == OperationStatus.SUCCESS;
+        }
+
+        Transaction txn = jetxn.mTxn;
+        DatabaseEntry oldEntry = new DatabaseEntry();
+
+        if (mDatabase.get(txn, keyEntry, oldEntry, LockMode.RMW) == OperationStatus.NOTFOUND) {
+            return false;
+        }
+
+        if (mDatabase.delete(txn, keyEntry) == OperationStatus.SUCCESS) {
+            jetxn.addUndo(new UndoByPut(mDatabase, txn, key, oldEntry));
+            return true;
+        }
+
+        return false;
     }
 
     @Override
-    protected void db_truncate(Transaction txn) throws Exception {
+    protected void db_truncate(JE_Transaction jetxn) throws Exception {
         close();
         JE_Repository repository = (JE_Repository) getRepository();
-        repository.mEnv.truncateDatabase(txn, mName, false);
-        open(false, txn, false);
+        repository.mEnv.truncateDatabase(jetxn == null ? null : jetxn.mTxn, mName, false);
+        open(false, jetxn, false);
     }
 
     @Override
-    protected boolean db_isEmpty(Transaction txn, Object database, boolean rmw) throws Exception {
-        Cursor cursor = ((Database) database).openCursor(txn, null);
+    protected boolean db_isEmpty(JE_Transaction jetxn, Object database, boolean rmw)
+        throws Exception
+    {
+        Cursor cursor = ((Database) database).openCursor(jetxn == null ? null : jetxn.mTxn, null);
         OperationStatus status = cursor.getFirst
             (new DatabaseEntry(), new DatabaseEntry(), rmw ? LockMode.RMW : null);
         cursor.close();
@@ -163,7 +207,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
     }
 
     @Override
-    protected Object env_openPrimaryDatabase(Transaction txn, String name)
+    protected Object env_openPrimaryDatabase(JE_Transaction jetxn, String name)
         throws Exception
     {
         JE_Repository repository = (JE_Repository) getRepository();
@@ -195,17 +239,17 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
         runDatabasePrepareForOpeningHook(config);
 
         mName = name;
-        return mDatabase = env.openDatabase(txn, name, config);
+        return mDatabase = env.openDatabase(jetxn == null ? null : jetxn.mTxn, name, config);
     }
 
     @Override
-    protected void env_removeDatabase(Transaction txn, String databaseName) throws Exception {
-        mDatabase.getEnvironment().removeDatabase(txn, databaseName);
+    protected void env_removeDatabase(JE_Transaction jetxn, String databaseName) throws Exception {
+        mDatabase.getEnvironment().removeDatabase(jetxn == null ? null : jetxn.mTxn, databaseName);
     }
 
     @Override
-    protected BDBCursor<Transaction, S> openCursor
-        (TransactionScope<Transaction> scope,
+    protected BDBCursor<JE_Transaction, S> openCursor
+        (TransactionScope<JE_Transaction> scope,
          byte[] startBound, boolean inclusiveStart,
          byte[] endBound, boolean inclusiveEnd,
          int maxPrefix,
@@ -221,5 +265,47 @@ class JE_Storage<S extends Storable> extends BDBStorage<Transaction, S> {
              reverse,
              this,
              (Database) database);
+    }
+
+    private class UndoByDelete implements JE_Transaction.UndoAction {
+        // Save ref to support truncate.
+        private final Database mDb;
+        private final Transaction mTxn;
+        private final byte[] mKey;
+
+        UndoByDelete(Database db, Transaction txn, byte[] key) {
+            mDb = db;
+            mTxn = txn;
+            mKey = key;
+        }
+
+        @Override
+        public void apply() throws DatabaseException {
+            if (mDb == mDatabase) {
+                mDb.delete(mTxn, new DatabaseEntry(mKey));
+            }
+        }
+    }
+
+    private class UndoByPut implements JE_Transaction.UndoAction {
+        // Save ref to support truncate.
+        private final Database mDb;
+        private final Transaction mTxn;
+        private final byte[] mKey;
+        private final DatabaseEntry mEntry;
+
+        UndoByPut(Database db, Transaction txn, byte[] key, DatabaseEntry entry) {
+            mDb = db;
+            mTxn = txn;
+            mKey = key;
+            mEntry = entry;
+        }
+
+        @Override
+        public void apply() throws DatabaseException {
+            if (mDb == mDatabase) {
+                mDb.put(mTxn, new DatabaseEntry(mKey), mEntry);
+            }
+        }
     }
 }

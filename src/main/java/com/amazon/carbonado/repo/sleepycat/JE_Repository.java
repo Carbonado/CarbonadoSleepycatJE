@@ -49,7 +49,7 @@ import com.amazon.carbonado.SupportException;
  *
  * @author Brian S O'Neill
  */
-class JE_Repository extends BDBRepository<Transaction> {
+class JE_Repository extends BDBRepository<JE_Transaction> {
     private static final TransactionConfig
         TXN_READ_UNCOMMITTED,        TXN_READ_COMMITTED,        TXN_REPEATABLE_READ,
         TXN_SERIALIZABLE,
@@ -230,12 +230,13 @@ class JE_Repository extends BDBRepository<Transaction> {
     }
 
     @Override
-    protected Transaction txn_begin(Transaction parent, IsolationLevel level) throws Exception {
-        // If parent exists, return it since real nested transactions are not
-        // supported in je3.x. This also has the side-effect that isolation
-        // level cannot be increased.
+    protected JE_Transaction txn_begin(JE_Transaction parent, IsolationLevel level)
+        throws Exception
+    {
+        // Nested transactions aren't supported in BDB-JE, so fake it. This
+        // means that isolation level cannot be increased.
         if (parent != null) {
-            return parent;
+            return parent.createChild();
         }
 
         TransactionConfig config;
@@ -254,35 +255,29 @@ class JE_Repository extends BDBRepository<Transaction> {
             break;
         }
 
-        return mEnv.beginTransaction(parent, config);
+        return new JE_Transaction(mEnv.beginTransaction(null, config));
     }
 
     @Override
-    protected Transaction txn_begin(Transaction parent, IsolationLevel level,
-                                    int timeout, TimeUnit unit)
+    protected JE_Transaction txn_begin(JE_Transaction parent, IsolationLevel level,
+                                       int timeout, TimeUnit unit)
         throws Exception
     {
-        // If parent exists, return it since real nested transactions are not
-        // supported in je3.x. This also has the side-effect that isolation
-        // level cannot be increased.
         if (parent != null) {
-            return parent;
+            return parent.createChild(mEnv, unit.toMicros(timeout));
         }
 
-        Transaction txn = txn_begin(parent, level);
+        JE_Transaction txn = txn_begin(null, level);
         txn.setLockTimeout(unit.toMicros(timeout));
         return txn;
     }
 
     @Override
-    protected Transaction txn_begin_nowait(Transaction parent, IsolationLevel level)
+    protected JE_Transaction txn_begin_nowait(JE_Transaction parent, IsolationLevel level)
         throws Exception
     {
-        // If parent exists, return it since real nested transactions are not
-        // supported in je3.x. This also has the side-effect that isolation
-        // level cannot be increased.
         if (parent != null) {
-            return parent;
+            return parent.createChild(mEnv, 0);
         }
 
         TransactionConfig config;
@@ -301,16 +296,16 @@ class JE_Repository extends BDBRepository<Transaction> {
             break;
         }
 
-        return mEnv.beginTransaction(parent, config);
+        return new JE_Transaction(mEnv.beginTransaction(null, config));
     }
 
     @Override
-    protected void txn_commit(Transaction txn) throws Exception {
+    protected void txn_commit(JE_Transaction txn) throws Exception {
         txn.commit();
     }
 
     @Override
-    protected void txn_abort(Transaction txn) throws Exception {
+    protected void txn_abort(JE_Transaction txn) throws Exception {
         txn.abort();
     }
 
@@ -342,7 +337,7 @@ class JE_Repository extends BDBRepository<Transaction> {
     }
 
     @Override
-    protected <S extends Storable> BDBStorage<Transaction, S> createBDBStorage(Class<S> type)
+    protected <S extends Storable> BDBStorage<JE_Transaction, S> createBDBStorage(Class<S> type)
         throws Exception
     {
         return new JE_Storage<S>(this, type);
