@@ -53,7 +53,7 @@ class JE_Transaction {
     }
 
     void addUndo(final UndoAction action) {
-        if (action != null) {
+        if (action != null && mParent != null) {
             final UndoAction prev = mUndoLog;
             if (prev == null) {
                 mUndoLog = action;
