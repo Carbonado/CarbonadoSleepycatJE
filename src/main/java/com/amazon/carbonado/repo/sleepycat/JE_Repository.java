@@ -128,6 +128,15 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
                 envConfig.setConfigParam("je.log.memOnly", "true");
             }
 
+            try {
+                Integer maxSize = builder.getLogFileMaxSize();
+                if (maxSize != null) {
+                    envConfig.setConfigParam("je.log.fileMax", maxSize.toString());
+                }
+            } catch (NoSuchMethodError e) {
+                // Carbonado package might be older.
+            }
+
             Boolean checksumEnabled = builder.getChecksumEnabled();
             if (checksumEnabled != null) {
                 envConfig.setConfigParam("je.log.checksumRead", checksumEnabled.toString());
