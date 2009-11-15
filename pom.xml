@@ -82,11 +82,20 @@
       <version>1.2.1</version>
     </dependency>
     <dependency>
-      <groupId>berkeleydb</groupId>
+      <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>
-      <version>3.3.87</version>
+      <version>4.0.71</version>
     </dependency>
   </dependencies>
+
+  <repositories>
+    <repository>
+      <id>oracleReleases</id>
+      <name>Oracle Released Java Packages</name>
+      <url>http://download.oracle.com/maven</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
 
   <build>
     <plugins>
