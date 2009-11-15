@@ -37,6 +37,8 @@ import com.amazon.carbonado.Storable;
 
 import com.amazon.carbonado.txn.TransactionScope;
 
+import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setBooleanParam;
+
 /**
  * Storage implementation for JERepository.
  *
@@ -225,16 +227,16 @@ class JE_Storage<S extends Storable> extends BDBStorage<JE_Transaction, S> {
 
         if (config == null) {
             config = new DatabaseConfig();
-            config.setSortedDuplicates(false);
+            setBooleanParam(config, "setSortedDuplicates", false);
         } else if (config.getSortedDuplicates()) {
             throw new IllegalArgumentException("DatabaseConfig: getSortedDuplicates is true");
         }
 
-        // Overwrite these settings as they depend upon the
-        // configuration of the repository
-        config.setTransactional(repository.mDatabasesTransactional);
-        config.setReadOnly(readOnly);
-        config.setAllowCreate(!readOnly);
+        // Overwrite these settings as they depend upon the configuration of
+        // the repository.
+        setBooleanParam(config, "setTransactional", repository.mDatabasesTransactional);
+        setBooleanParam(config, "setReadOnly", readOnly);
+        setBooleanParam(config, "setAllowCreate", !readOnly);
 
         runDatabasePrepareForOpeningHook(config);
 

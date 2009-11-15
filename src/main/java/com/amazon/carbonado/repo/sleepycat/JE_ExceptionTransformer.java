@@ -56,10 +56,10 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             return fe;
         }
         if (e instanceof DatabaseException) {
-            if (e instanceof LockNotGrantedException) {
+            if (isTimeout(e)) {
                 return new FetchTimeoutException(e);
             }
-            if (e instanceof DeadlockException) {
+            if (isDeadlock(e)) {
                 return new FetchDeadlockException(e);
             }
         }
@@ -73,10 +73,10 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             return pe;
         }
         if (e instanceof DatabaseException) {
-            if (e instanceof LockNotGrantedException) {
+            if (isTimeout(e)) {
                 return new PersistTimeoutException(e);
             }
-            if (e instanceof DeadlockException) {
+            if (isDeadlock(e)) {
                 return new PersistDeadlockException(e);
             }
             String message = e.getMessage();
@@ -85,5 +85,17 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             }
         }
         return null;
+    }
+
+    private static boolean isTimeout(Throwable e) {
+        return (e.getClass().equals(LockNotGrantedException.class)) ||
+            e.getClass().getName().endsWith(".LockNotAvailableException") ||
+            e.getClass().getName().endsWith(".LockTimeoutException") ||
+            e.getClass().getName().endsWith(".TransactionTimeoutException");
+    }
+
+    private static boolean isDeadlock(Throwable e) {
+        return (e.getClass().equals(DeadlockException.class)) ||
+            e.getClass().getName().endsWith(".LockConflictException");
     }
 }

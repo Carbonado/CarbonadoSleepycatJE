@@ -40,6 +40,10 @@ import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.Storable;
 import com.amazon.carbonado.SupportException;
 
+import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setBooleanParam;
+import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setIntParam;
+import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setNamedParam;
+
 /**
  * Repository implementation backed by a Berkeley DB, Java Edition. Data is
  * encoded in the DB in a specialized format, and so this repository should not
@@ -51,37 +55,68 @@ import com.amazon.carbonado.SupportException;
  */
 class JE_Repository extends BDBRepository<JE_Transaction> {
     private static final TransactionConfig
-        TXN_READ_UNCOMMITTED,        TXN_READ_COMMITTED,        TXN_REPEATABLE_READ,
+        TXN_READ_UNCOMMITTED,
+        TXN_READ_COMMITTED,
+        TXN_REPEATABLE_READ,
         TXN_SERIALIZABLE,
-        TXN_READ_UNCOMMITTED_NOWAIT, TXN_READ_COMMITTED_NOWAIT, TXN_REPEATABLE_READ_NOWAIT,
+        TXN_READ_UNCOMMITTED_NOWAIT,
+        TXN_READ_COMMITTED_NOWAIT,
+        TXN_REPEATABLE_READ_NOWAIT,
         TXN_SERIALIZABLE_NOWAIT;
 
     static {
-        TXN_READ_UNCOMMITTED = new TransactionConfig();
-        TXN_READ_UNCOMMITTED.setReadUncommitted(true);
+        TransactionConfig
+            readUncommitted,
+            readCommitted,
+            repeatableRead,
+            serializable,
+            readUncommittedNoWait,
+            readCommittedNoWait,
+            repeatableReadNoWait,
+            serializableNoWait;
 
-        TXN_READ_COMMITTED = new TransactionConfig();
-        TXN_READ_COMMITTED.setReadCommitted(true);
+        try {
+            readUncommitted = new TransactionConfig();
+            setBooleanParam(readUncommitted, "setReadUncommitted", true);
 
-        TXN_REPEATABLE_READ = TransactionConfig.DEFAULT;
+            readCommitted = new TransactionConfig();
+            setBooleanParam(readCommitted, "setReadCommitted", true);
 
-        TXN_SERIALIZABLE = new TransactionConfig();
-        TXN_SERIALIZABLE.setSerializableIsolation(true);
+            repeatableRead = TransactionConfig.DEFAULT;
 
-        TXN_READ_UNCOMMITTED_NOWAIT = new TransactionConfig();
-        TXN_READ_UNCOMMITTED_NOWAIT.setReadUncommitted(true);
-        TXN_READ_UNCOMMITTED_NOWAIT.setNoWait(true);
+            serializable = new TransactionConfig();
+            setBooleanParam(serializable, "setSerializableIsolation", true);
 
-        TXN_READ_COMMITTED_NOWAIT = new TransactionConfig();
-        TXN_READ_COMMITTED_NOWAIT.setReadCommitted(true);
-        TXN_READ_COMMITTED_NOWAIT.setNoWait(true);
+            readUncommittedNoWait = new TransactionConfig();
+            setBooleanParam(readUncommittedNoWait, "setReadUncommitted", true);
+            setBooleanParam(readUncommittedNoWait, "setNoWait", true);
 
-        TXN_REPEATABLE_READ_NOWAIT = new TransactionConfig();
-        TXN_REPEATABLE_READ_NOWAIT.setNoWait(true);
+            readCommittedNoWait = new TransactionConfig();
+            setBooleanParam(readCommittedNoWait, "setReadCommitted", true);
+            setBooleanParam(readCommittedNoWait, "setNoWait", true);
 
-        TXN_SERIALIZABLE_NOWAIT = new TransactionConfig();
-        TXN_SERIALIZABLE_NOWAIT.setSerializableIsolation(true);
-        TXN_SERIALIZABLE_NOWAIT.setNoWait(true);
+            repeatableReadNoWait = new TransactionConfig();
+            setBooleanParam(repeatableReadNoWait, "setNoWait", true);
+
+            serializableNoWait = new TransactionConfig();
+            setBooleanParam(serializableNoWait, "setSerializableIsolation", true);
+            setBooleanParam(serializableNoWait, "setNoWait", true);
+        } catch (RepositoryException e) {
+            Throwable cause = e.getCause();
+            if (cause == null) {
+                cause = e;
+            }
+            throw new ExceptionInInitializerError(cause);
+        }
+
+        TXN_READ_UNCOMMITTED = readUncommitted;
+        TXN_READ_COMMITTED = readCommitted;
+        TXN_REPEATABLE_READ = repeatableRead;
+        TXN_SERIALIZABLE = serializable;
+        TXN_READ_UNCOMMITTED_NOWAIT = readUncommittedNoWait;
+        TXN_READ_COMMITTED_NOWAIT = readCommittedNoWait;
+        TXN_REPEATABLE_READ_NOWAIT = repeatableReadNoWait;
+        TXN_SERIALIZABLE_NOWAIT = serializableNoWait;
     }
 
     final Environment mEnv;
@@ -119,19 +154,21 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
         if (envConfig == null) {
             envConfig = new EnvironmentConfig();
-            envConfig.setTransactional(true);
-            envConfig.setReadOnly(builder.getReadOnly());
-            envConfig.setAllowCreate(!builder.getReadOnly());
-            envConfig.setTxnNoSync(builder.getTransactionNoSync());
-            envConfig.setTxnWriteNoSync(builder.getTransactionWriteNoSync());
+
+            setBooleanParam(envConfig, "setTransactional", true);
+            setBooleanParam(envConfig, "setReadOnly", builder.getReadOnly());
+            setBooleanParam(envConfig, "setAllowCreate", !builder.getReadOnly());
+            setBooleanParam(envConfig, "setTxnNoSync", builder.getTransactionNoSync());
+            setBooleanParam(envConfig, "setTxnWriteNoSync", builder.getTransactionWriteNoSync());
+
             if (builder.getLogInMemory()) {
-                envConfig.setConfigParam("je.log.memOnly", "true");
+                setNamedParam(envConfig, "je.log.memOnly", "true");
             }
 
             try {
                 Integer maxSize = builder.getLogFileMaxSize();
                 if (maxSize != null) {
-                    envConfig.setConfigParam("je.log.fileMax", maxSize.toString());
+                    setNamedParam(envConfig, "je.log.fileMax", maxSize.toString());
                 }
             } catch (NoSuchMethodError e) {
                 // Carbonado package might be older.
@@ -139,24 +176,24 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
             Boolean checksumEnabled = builder.getChecksumEnabled();
             if (checksumEnabled != null) {
-                envConfig.setConfigParam("je.log.checksumRead", checksumEnabled.toString());
+                setNamedParam(envConfig, "je.log.checksumRead", checksumEnabled.toString());
             }
 
             Integer cachePercent = builder.getCachePercent();
             if (cachePercent != null && cachePercent > 0) {
-                envConfig.setConfigParam("je.maxMemoryPercent", cachePercent.toString());
+                setNamedParam(envConfig, "je.maxMemoryPercent", cachePercent.toString());
             }
 
             // cacheSize will override any existing maxMemoryPercent setting
             Long cacheSize = builder.getCacheSize();
             if (cacheSize != null && cacheSize > 0) {
-                envConfig.setConfigParam("je.maxMemory", cacheSize.toString());
+                setNamedParam(envConfig, "je.maxMemory", cacheSize.toString());
             }
 
-            envConfig.setConfigParam("je.lock.timeout",
-                        String.valueOf(builder.getLockTimeoutInMicroseconds()));
-            envConfig.setConfigParam("je.txn.timeout",
-                        String.valueOf(builder.getTransactionTimeoutInMicroseconds()));
+            setNamedParam(envConfig, "je.lock.timeout",
+                          String.valueOf(builder.getLockTimeoutInMicroseconds()));
+            setNamedParam(envConfig, "je.txn.timeout",
+                          String.valueOf(builder.getTransactionTimeoutInMicroseconds()));
 
         } else {
             if (!envConfig.getTransactional()) {
@@ -321,15 +358,15 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     @Override
     protected void env_checkpoint() throws Exception {
         CheckpointConfig cc = new CheckpointConfig();
-        cc.setForce(true);
+        setBooleanParam(cc, "setForce", true);
         mEnv.checkpoint(cc);
     }
 
     @Override
     protected void env_checkpoint(int kBytes, int minutes) throws Exception {
         CheckpointConfig cc = new CheckpointConfig();
-        cc.setKBytes(kBytes);
-        cc.setMinutes(minutes);
+        setIntParam(cc, "setKBytes", kBytes);
+        setIntParam(cc, "setMinutes", minutes);
         mEnv.checkpoint(cc);
     }
 
