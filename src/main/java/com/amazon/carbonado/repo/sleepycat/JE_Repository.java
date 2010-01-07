@@ -195,6 +195,11 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
             setNamedParam(envConfig, "je.txn.timeout",
                           String.valueOf(builder.getTransactionTimeoutInMicroseconds()));
 
+            try {
+                setNamedParam(envConfig, "je.cleaner.expunge", String.valueOf(!mKeepOldLogFiles));
+            } catch (NoSuchFieldError e) {
+                // Carbonado package might be older.
+            }
         } else {
             if (!envConfig.getTransactional()) {
                 throw new IllegalArgumentException("EnvironmentConfig: getTransactional is false");
