@@ -83,6 +83,11 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             if (message != null && message.toUpperCase().indexOf("READ ONLY") >= 0) {
                 return new PersistDeniedException(e);
             }
+        } else if (e instanceof UnsupportedOperationException) {
+            String message = e.getMessage();
+            if (message != null && message.toUpperCase().indexOf("READ ONLY") >= 0) {
+                return new PersistDeniedException(e);
+            }
         }
         return null;
     }
