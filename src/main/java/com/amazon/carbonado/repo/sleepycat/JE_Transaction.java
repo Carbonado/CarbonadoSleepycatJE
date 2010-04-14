@@ -96,7 +96,7 @@ class JE_Transaction {
     }
 
     void commitNoSync() throws DatabaseException {
-        if (mParent != null) {
+        if (mParent == null) {
             mTxn.commitNoSync();
         } else {
             mParent.addUndo(mUndoLog);
@@ -104,7 +104,7 @@ class JE_Transaction {
     }
 
     void commitWriteNoSync() throws DatabaseException {
-        if (mParent != null) {
+        if (mParent == null) {
             mTxn.commitWriteNoSync();
         } else {
             mParent.addUndo(mUndoLog);
