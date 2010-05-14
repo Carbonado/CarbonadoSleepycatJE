@@ -52,6 +52,7 @@ import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setNamedPar
  * automatically.
  *
  * @author Brian S O'Neill
+ * @author Olga Kuznetsova
  */
 class JE_Repository extends BDBRepository<JE_Transaction> {
     private static final TransactionConfig
@@ -395,7 +396,9 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     }
 
     @Override
-    void enterBackupMode() throws Exception {
+    void enterBackupMode(boolean deleteOldLogFiles) throws Exception {
+///FIXME: If user specifies to deleteOldLogFiles, then all log files that end with .del should
+///be removed.
         DbBackup backup = new DbBackup(mEnv);
         backup.startBackup();
         mBackup = backup;
@@ -406,7 +409,7 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
         DbBackup backup = mBackup;
         if (backup != null) {
             try {
-                backup.endBackup();
+		backup.endBackup();
             } finally {
                 mBackup = null;
             }
@@ -414,7 +417,19 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     }
 
     @Override
-    File[] backupFiles() throws Exception {
+    void enterIncrementalBackupMode(long lastLogNum, boolean deleteOldLogFiles) throws Exception {
+        DbBackup backup = new DbBackup(mEnv, lastLogNum);
+        backup.startBackup();
+        mBackup = backup;
+    }
+
+    @Override
+    void exitIncrementalBackupMode() throws Exception {
+	exitBackupMode();
+    }
+
+    @Override
+    File[] backupFiles(long[] newLastLogNum) throws Exception {
         File home = mEnv.getHome();
 
         String[] names = mBackup.getLogFilesInBackupSet();
@@ -422,7 +437,12 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
         for (int i=0; i<names.length; i++) {
             files[i] = new File(home, names[i]);
         }
-
+	newLastLogNum[0] = mBackup.getLastFileInBackupSet();
         return files;
+    }
+
+    @Override
+    File[] incrementalBackup(long lastLogNum, long[] newLastLogNum) throws Exception {
+	return backupFiles(newLastLogNum);
     }
 }
