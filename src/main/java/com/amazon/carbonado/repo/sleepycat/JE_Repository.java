@@ -397,8 +397,8 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
     @Override
     void enterBackupMode(boolean deleteOldLogFiles) throws Exception {
-///FIXME: If user specifies to deleteOldLogFiles, then all log files that end with .del should
-///be removed.
+        // FIXME: If user specifies to deleteOldLogFiles, then all log files
+        // that end with .del should be removed.
         DbBackup backup = new DbBackup(mEnv);
         backup.startBackup();
         mBackup = backup;
@@ -409,7 +409,7 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
         DbBackup backup = mBackup;
         if (backup != null) {
             try {
-		backup.endBackup();
+                backup.endBackup();
             } finally {
                 mBackup = null;
             }
@@ -425,7 +425,7 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
     @Override
     void exitIncrementalBackupMode() throws Exception {
-	exitBackupMode();
+        exitBackupMode();
     }
 
     @Override
@@ -437,12 +437,12 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
         for (int i=0; i<names.length; i++) {
             files[i] = new File(home, names[i]);
         }
-	newLastLogNum[0] = mBackup.getLastFileInBackupSet();
+        newLastLogNum[0] = mBackup.getLastFileInBackupSet();
         return files;
     }
 
     @Override
     File[] incrementalBackup(long lastLogNum, long[] newLastLogNum) throws Exception {
-	return backupFiles(newLastLogNum);
+        return backupFiles(newLastLogNum);
     }
 }
