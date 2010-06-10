@@ -429,7 +429,13 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     }
 
     @Override
-    File[] backupFiles(long[] newLastLogNum) throws Exception {
+    File[] backupDataFiles() throws Exception {
+        // BDB-JE just has log files.
+        return new File[0];
+    }
+
+    @Override
+    File[] backupLogFiles(long[] newLastLogNum) throws Exception {
         File home = mEnv.getHome();
 
         String[] names = mBackup.getLogFilesInBackupSet();
@@ -443,6 +449,6 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
     @Override
     File[] incrementalBackup(long lastLogNum, long[] newLastLogNum) throws Exception {
-        return backupFiles(newLastLogNum);
+        return backupLogFiles(newLastLogNum);
     }
 }
