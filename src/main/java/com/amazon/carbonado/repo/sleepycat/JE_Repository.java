@@ -369,6 +369,11 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     }
 
     @Override
+    protected void env_sync() throws Exception {
+        mEnv.sync();
+    }
+
+    @Override
     protected void env_checkpoint(int kBytes, int minutes) throws Exception {
         CheckpointConfig cc = new CheckpointConfig();
         setIntParam(cc, "setKBytes", kBytes);
