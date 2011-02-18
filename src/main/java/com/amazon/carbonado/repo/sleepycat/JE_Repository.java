@@ -19,6 +19,7 @@
 package com.amazon.carbonado.repo.sleepycat;
 
 import java.io.File;
+import java.io.PrintStream;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,6 +31,7 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.JEVersion;
 import com.sleepycat.je.Transaction;
 import com.sleepycat.je.TransactionConfig;
+import com.sleepycat.je.VerifyConfig;
 
 import com.sleepycat.je.util.DbBackup;
 
@@ -248,6 +250,12 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
     public File getDataHome() {
         return mEnvHome;
+    }
+
+    @Override
+    boolean verify(PrintStream out) throws Exception {
+        VerifyConfig config = new VerifyConfig();
+        return mEnv.verify(config, out);
     }
 
     @Override
