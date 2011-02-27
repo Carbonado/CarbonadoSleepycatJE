@@ -25,10 +25,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sleepycat.je.CheckpointConfig;
+import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseConfig;
+import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.JEVersion;
+import com.sleepycat.je.LockMode;
+import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
 import com.sleepycat.je.TransactionConfig;
 import com.sleepycat.je.VerifyConfig;
@@ -41,6 +46,9 @@ import com.amazon.carbonado.Repository;
 import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.Storable;
 import com.amazon.carbonado.SupportException;
+
+import com.amazon.carbonado.raw.DataDecoder;
+import com.amazon.carbonado.raw.DataEncoder;
 
 import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setBooleanParam;
 import static com.amazon.carbonado.repo.sleepycat.JE_SetConfigOption.setIntParam;
@@ -122,10 +130,14 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
         TXN_SERIALIZABLE_NOWAIT = serializableNoWait;
     }
 
+    private static final String SYNC_DB_NAME = "com.amazon.carbonado.repo.sleepycat.SyncDb";
+
     final Environment mEnv;
     final boolean mDatabasesTransactional;
 
     private DbBackup mBackup;
+
+    private Database mSyncDb;
 
     /**
      * Open the repository using the given BDB repository configuration.
@@ -378,7 +390,70 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
 
     @Override
     protected void env_sync() throws Exception {
-        mEnv.sync();
+        // This should be the correct API to call, but it is as expensive as a checkpoint.
+        //mEnv.sync();
+
+        // Instead, update a tiny record in a durable transaction to achieve the desired
+        // effect. This works because of the log file structure of BDB-JE.
+
+        Database syncDb;
+        synchronized (this) {
+            syncDb = mSyncDb;
+            if (syncDb == null) {
+                if (mEnv.getConfig().getReadOnly()) {
+                    return;
+                }
+
+                DatabaseConfig config = new DatabaseConfig();
+                setBooleanParam(config, "setSortedDuplicates", false);
+                setBooleanParam(config, "setTransactional", true);
+                setBooleanParam(config, "setAllowCreate", true);
+
+                mSyncDb = syncDb = mEnv.openDatabase(null, SYNC_DB_NAME, config);
+            }
+        }
+
+        byte[] key = {0};
+        DatabaseEntry keyEntry = new DatabaseEntry(key);
+        DatabaseEntry dataEntry = new DatabaseEntry();
+
+        synchronized (syncDb) {
+            boolean committed = false;
+            Transaction txn = mEnv.beginTransaction(null, null);
+            try {
+                OperationStatus status = syncDb.get(txn, keyEntry, dataEntry, LockMode.RMW);
+
+                setCount: {
+                    if (status == OperationStatus.SUCCESS) {
+                        try {
+                            byte[] data = dataEntry.getData();
+                            long count = DataDecoder.decodeLong(data, 0);
+                            count++;
+                            DataEncoder.encode(count, data, 0);
+                            dataEntry.setData(data);
+                            break setCount;
+                        } catch (IndexOutOfBoundsException e) {
+                            // Reset to zero.
+                        }
+                    }
+
+                    byte[] data = new byte[8];
+                    DataEncoder.encode(0, data, 0);
+                    dataEntry.setData(data);
+                }
+
+                if (syncDb.put(txn, keyEntry, dataEntry) != OperationStatus.SUCCESS) {
+                    throw new RepositoryException("Unable to write sync record");
+                }
+
+                txn.commitSync();
+                committed = true;
+            } finally {
+                if (!committed) {
+                    txn.abort();
+                }
+            }
+        }
     }
 
     @Override
@@ -397,6 +472,16 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     @Override
     protected void env_close() throws Exception {
         if (mEnv != null) {
+            Database syncDb;
+            synchronized (this) {
+                syncDb = mSyncDb;
+            }
+            if (syncDb != null) {
+                synchronized (syncDb) {
+                    syncDb.close();
+                }
+            }
+
             mEnv.close();
         }
     }
