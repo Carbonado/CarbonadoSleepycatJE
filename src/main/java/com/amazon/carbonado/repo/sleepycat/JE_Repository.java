@@ -148,8 +148,11 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
     JE_Repository(AtomicReference<Repository> rootRef, BDBRepositoryBuilder builder)
         throws RepositoryException
     {
-        super(rootRef, builder, JE_ExceptionTransformer.getInstance());
+        super(rootRef, builder, new JE_ExceptionTransformer());
 
+        JE_ExceptionTransformer exTransformer = (JE_ExceptionTransformer) getExceptionTransformer();
+        exTransformer.setPanicHandler(builder.getPanicHandler());
+        
         if (JEVersion.CURRENT_VERSION.getMajor() < 3) {
             // Although repository can work just fine with older versions, some
             // have bugs which cause severe storage corruption.
@@ -224,7 +227,7 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
         try {
             mEnv = new Environment(builder.getEnvironmentHomeFile(), envConfig);
         } catch (DatabaseException e) {
-            throw JE_ExceptionTransformer.getInstance().toRepositoryException(e);
+            throw getExceptionTransformer().toRepositoryException(e);
         } catch (Throwable e) {
             String message = "Unable to open environment";
             if (e.getMessage() != null) {
@@ -232,6 +235,8 @@ class JE_Repository extends BDBRepository<JE_Transaction> {
             }
             throw new RepositoryException(message, e);
         }
+        
+        exTransformer.setEnvironment(mEnv);
 
         boolean databasesTransactional = envConfig.getTransactional();
         if (builder.getDatabasesTransactional() != null) {

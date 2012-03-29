@@ -85,7 +85,7 @@ class JE_Storage<S extends Storable> extends BDBStorage<JE_Transaction, S> {
         try {
             return mDatabase.count();
         } catch (DatabaseException e) {
-            throw JE_ExceptionTransformer.getInstance().transformIntoFetchException(e);
+            throw mRepository.toFetchException(e);
         }
     }
 

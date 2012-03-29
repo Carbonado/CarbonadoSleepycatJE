@@ -20,6 +20,8 @@ package com.amazon.carbonado.repo.sleepycat;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.DeadlockException;
+import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentFailureException;
 import com.sleepycat.je.LockNotGrantedException;
 
 import com.amazon.carbonado.FetchDeadlockException;
@@ -29,6 +31,7 @@ import com.amazon.carbonado.PersistDeadlockException;
 import com.amazon.carbonado.PersistDeniedException;
 import com.amazon.carbonado.PersistException;
 import com.amazon.carbonado.PersistTimeoutException;
+import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.spi.ExceptionTransformer;
 
 /**
@@ -37,16 +40,39 @@ import com.amazon.carbonado.spi.ExceptionTransformer;
  * @author Brian S O'Neill
  */
 class JE_ExceptionTransformer extends ExceptionTransformer {
-    private static JE_ExceptionTransformer cInstance;
-
-    public static JE_ExceptionTransformer getInstance() {
-        if (cInstance == null) {
-            cInstance = new JE_ExceptionTransformer();
-        }
-        return cInstance;
+    private Environment mEnvironment;
+    private BDBPanicHandler mPanicHandler;
+    
+    /**
+     * @deprecated JE_ExceptionTransformer is no longer a static class.
+     */
+    public static JE_ExceptionTransformer getInstance() { 
+        return new JE_ExceptionTransformer();
     }
 
-    JE_ExceptionTransformer() {
+    public JE_ExceptionTransformer() {
+        mPanicHandler = null;
+        mEnvironment = null;
+    }
+    
+    public void setPanicHandler(BDBPanicHandler panicHandler) {
+                mPanicHandler = panicHandler;   
+        }
+    
+    public void setEnvironment(Environment env) {
+        mEnvironment = env;
+    }
+    
+    @Override
+    protected RepositoryException transformIntoRepositoryException(Throwable e) {
+        RepositoryException re = super.transformIntoRepositoryException(e);
+        if (re != null) {
+            return re;
+        }
+                
+        handleIfPanic(e);
+                
+        return null;
     }
 
     @Override
@@ -56,6 +82,8 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             return fe;
         }
         if (e instanceof DatabaseException) {
+            handleIfPanic(e);
+                
             if (isTimeout(e)) {
                 return new FetchTimeoutException(e);
             }
@@ -73,6 +101,8 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             return pe;
         }
         if (e instanceof DatabaseException) {
+            handleIfPanic(e);
+
             if (isTimeout(e)) {
                 return new PersistTimeoutException(e);
             }
@@ -102,5 +132,19 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
     private static boolean isDeadlock(Throwable e) {
         return (e.getClass().equals(DeadlockException.class)) ||
             e.getClass().getName().endsWith(".LockConflictException");
+    }
+    
+    private void handleIfPanic(Throwable e) {
+        if (e instanceof EnvironmentFailureException) {
+            if (mPanicHandler != null) {
+                if (mEnvironment != null) {
+                    if (!mEnvironment.isValid()) {
+                        mPanicHandler.onPanic(mEnvironment, (EnvironmentFailureException) e);
+                    }
+                } else {
+                    mPanicHandler.onPanic(mEnvironment, (EnvironmentFailureException) e);
+                }
+            }
+        }
     }
 }
