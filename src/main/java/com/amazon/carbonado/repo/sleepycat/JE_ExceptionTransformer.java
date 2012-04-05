@@ -18,12 +18,6 @@
 
 package com.amazon.carbonado.repo.sleepycat;
 
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.DeadlockException;
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentFailureException;
-import com.sleepycat.je.LockNotGrantedException;
-
 import com.amazon.carbonado.FetchDeadlockException;
 import com.amazon.carbonado.FetchException;
 import com.amazon.carbonado.FetchTimeoutException;
@@ -33,6 +27,11 @@ import com.amazon.carbonado.PersistException;
 import com.amazon.carbonado.PersistTimeoutException;
 import com.amazon.carbonado.RepositoryException;
 import com.amazon.carbonado.spi.ExceptionTransformer;
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.DeadlockException;
+import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentFailureException;
+import com.sleepycat.je.LockNotGrantedException;
 
 /**
  * Custom exception transform rules.
@@ -134,17 +133,42 @@ class JE_ExceptionTransformer extends ExceptionTransformer {
             e.getClass().getName().endsWith(".LockConflictException");
     }
     
-    private void handleIfPanic(Throwable e) {
-        if (e instanceof EnvironmentFailureException) {
+    private void handleIfPanic(Throwable t) {
+        if (!(t instanceof Exception)) {
+            return;
+        }
+        
+        Exception e = (Exception) t;
+
+        boolean failure;
+        try {
+            failure = CheckForFailureException.check(e);
+        
+        } catch (NoClassDefFoundError e2) {
+            // Can't be a database failure exception if the class can't be found
+            failure = false;
+        }
+        
+        if (failure) {
             if (mPanicHandler != null) {
                 if (mEnvironment != null) {
                     if (!mEnvironment.isValid()) {
-                        mPanicHandler.onPanic(mEnvironment, (EnvironmentFailureException) e);
+                        mPanicHandler.onPanic(mEnvironment, e);
                     }
                 } else {
-                    mPanicHandler.onPanic(mEnvironment, (EnvironmentFailureException) e);
+                    mPanicHandler.onPanic(mEnvironment, e);
                 }
             }
+        }
+    }
+    
+    /**
+     * This static class exists to prevent a strange NoClassDefFoundError
+     * issue with versions of BDB-JE older than 4.0.
+     */
+    private static class CheckForFailureException {
+        static boolean check(Exception e) {
+            return e instanceof EnvironmentFailureException;
         }
     }
 }
