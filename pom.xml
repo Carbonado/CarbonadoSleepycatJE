@@ -81,12 +81,12 @@
     <dependency>
       <groupId>com.amazon.carbonado</groupId>
       <artifactId>carbonado</artifactId>
-      <version>1.2.3</version>
+      <version>[1.2.4,)</version>
     </dependency>
     <dependency>
       <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>
-      <version>4.1.6</version>
+      <version>[4.1.6,)</version>
     </dependency>
   </dependencies>
 
